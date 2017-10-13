@@ -8,27 +8,12 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.application.Application;
-import javafx.event.EventHandler;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Group;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.paint.Color;
-import javafx.stage.Stage;
-import javafx.util.Duration;
-
 public class Main extends Application
 {
     @Override
     public void start(Stage primaryStage) throws Exception
     {
-        primaryStage.setTitle("NEAT");
+        primaryStage.setTitle("TENN");
         Group root = new Group();
         Canvas canvas = new Canvas(500, 250);
         root.getChildren().add(canvas);

@@ -1,13 +1,8 @@
 package TENN;
 
-import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.util.Duration;
-import javazoom.jl.player.advanced.AdvancedPlayer;
 import org.apache.commons.math3.util.FastMath;
-
 import java.io.*;
 import java.util.ArrayList;
 
@@ -39,7 +34,6 @@ class Trainer
     static final double g = 9.81; //probably doesn't need explanation
     static final double dtOverPoleLength = dt / poleLength;
     static final double gdtOverPoleLength = g * dtOverPoleLength;
-    static final double oneOverSixteen = 1 / 16;
 
     long allTimeBest = 0;
 
@@ -190,12 +184,12 @@ class Trainer
 
                 try
                 {
-                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/success/" + currentGeneration + ".txt"), "utf-8"));
+                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/success/" + number + ".txt"), "utf-8"));
+                    writer.write("Completed in " + currentGeneration + " generations." + System.getProperty("line.separator"));
                     writer.write("Final network:" + System.getProperty("line.separator"));
                     writer.write(generation[currentNeuralNetwork].toString());
                     writer.close();
-                }
-                catch (Exception e)
+                } catch (Exception e)
                 {
 
                 }
@@ -211,7 +205,6 @@ class Trainer
                     insertNetwork();
 
                 currentNeuralNetwork++;
-                //System.out.println(t + "     exec path: " + generation[currentNeuralNetwork - 1]);
                 if (currentNeuralNetwork == 100)
                 {
                     allTimeBest = (allTimeBest < orderedNeuralNetworks.get(0).fitness) ? orderedNeuralNetworks.get(0).fitness : allTimeBest;
@@ -220,12 +213,11 @@ class Trainer
                         System.out.println("Simulation " + number + " stopped; generation 2500 reached");
                         try
                         {
-                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/fail/" + allTimeBest + ".txt"), "utf-8"));
+                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
                             writer.write("Failed after 2500 generations" + System.getProperty("line.separator"));
                             writer.write("Best: " + allTimeBest);
                             writer.close();
-                        }
-                        catch (Exception e)
+                        } catch (Exception e)
                         {
 
                         }
@@ -254,7 +246,7 @@ class Trainer
             //kinematics
             double output = generation[currentNeuralNetwork].execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
 
-            cartSpeed += tendt * FastMath.tanh(output * oneOverSixteen);
+            cartSpeed += tendt * FastMath.tanh(output / 16);
             cartPosition += cartSpeed * dt;
             poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
             poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
@@ -304,9 +296,9 @@ class Trainer
         try
         {
             System.in.read();
-        }
-        catch (Exception e)
+        } catch (Exception e)
         {
+
 
         }
     }

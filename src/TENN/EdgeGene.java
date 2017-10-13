@@ -10,7 +10,8 @@ class EdgeGene
     short incomingNode;
     short outgoingNode;
 
-    static final double changeWeight = 0.6;
+    static final double mutationMultiplier = 1.5;
+    static final double changeWeight = 0.4 * mutationMultiplier;
     static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
 
     static int edgeGenes = 0;
@@ -29,7 +30,7 @@ class EdgeGene
 
         if (FastMath.random() < changeWeight)
         {
-            double mutatedWeight = (1.6 * random.nextNormalizedDouble()) + tempEdgeGene.edge.weight;
+            double mutatedWeight = (3.33 * random.nextNormalizedDouble()) + tempEdgeGene.edge.weight;
             if (mutatedWeight > 10)
                 mutatedWeight = 10;
             else if (mutatedWeight < -10)

@@ -9,8 +9,8 @@ class NodeGene
     Node node;
     short position; //position in boxes
 
-    static final double mutationMultiplier = 1;
-    static final double changeActivationType = 0.3 * mutationMultiplier;
+    static final double mutationMultiplier = 1.5;
+    static final double changeActivationType = 0.1 * mutationMultiplier;
     static final double changeAC1 = 0.4 * mutationMultiplier;
     static final double changeAC2 = 0.4 * mutationMultiplier;
     static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
@@ -34,8 +34,8 @@ class NodeGene
             double mutatedAC1 = (2.5 * random.nextNormalizedDouble()) + tempNodeGene.node.AC1;
             if (mutatedAC1 > 10)
                 mutatedAC1 = 10;
-            if (mutatedAC1 < 0)
-                mutatedAC1 = 0;
+            if (mutatedAC1 < -10)
+                mutatedAC1 = -10;
             tempNodeGene.node.AC1 = mutatedAC1;
         }
 
@@ -44,8 +44,8 @@ class NodeGene
             double mutatedAC2 = (0.5 * random.nextNormalizedDouble()) + tempNodeGene.node.AC2;
             if (mutatedAC2 > 2)
                 mutatedAC2 = 2;
-            if (mutatedAC2 < 0)
-                mutatedAC2 = 0;
+            if (mutatedAC2 < -2)
+                mutatedAC2 = -2;
             tempNodeGene.node.AC2 = mutatedAC2;
         }
 

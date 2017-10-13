@@ -250,9 +250,30 @@ class NeuralNetwork
             mutatedEdgeGenes[i] = EdgeGene.randomEdgeGene(i, mutatedSize);
 
         NeuralNetwork tempNeuralNetwork = new NeuralNetwork(inputNames, outputNames, mutatedNodeGenes, mutatedEdgeGenes, (short) mutatedSize);
-        tempNeuralNetwork.dead |= mutatedSize < inputNames.length + outputNames.length;
-
+        if (mutatedSize < inputNames.length + outputNames.length)
+        {
+            //System.out.println("dead 5");
+            tempNeuralNetwork.dead = true;
+        }
         return tempNeuralNetwork;
+    }
+
+    void clean()
+    {
+        for (Node inputNode : inLayer)
+            for (Edge outgoingEdge : inputNode.outgoingEdges)
+                clean(outgoingEdge.outgoingNode);
+    }
+
+    void clean(Node temp)
+    {
+        if (temp.cleaned)
+            return;
+        temp.cleaned = true;
+        for (Edge outgoingEdge : temp.outgoingEdges)
+            clean(outgoingEdge.outgoingNode);
+        temp.residue = 0;
+        temp.val = 0;
     }
 
     @Override
@@ -287,7 +308,7 @@ class NeuralNetwork
                         break;
 
                     case 3:
-                        output += ((FastMath.signum(tempNode.AC2) == -1) ? "-)" : "") + tempDouble + "sgn(x)" + newline;
+                        output += tempDouble  + " * " + ((FastMath.signum(tempNode.AC2) == -1) ? "- sgn(x)" : "+ sgn(x)") + ")" + newline;
                         break;
 
                     case 4:
