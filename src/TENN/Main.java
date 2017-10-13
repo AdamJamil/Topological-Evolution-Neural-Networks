@@ -10,6 +10,8 @@ import javafx.stage.Stage;
 
 public class Main extends Application
 {
+    static final boolean showcaseMode = true;
+
     @Override
     public void start(Stage primaryStage) throws Exception
     {
@@ -23,17 +25,24 @@ public class Main extends Application
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.setFill(Color.BLACK); //everything will be black, not worth alternating colors because of performance drop
 
-        for (int i = 0; i < 100; i++)
+        if (showcaseMode)
         {
-            final int temp = i;
-            new Thread(new Runnable()
+            new ShowcaseTrainer(canvas, new String[]{"x", "v", "theta", "ω"}, new String[]{"force"});
+        }
+        else
+        {
+            for (int i = 0; i < 100; i++)
             {
-                @Override
-                public void run()
+                final int temp = i;
+                new Thread(new Runnable()
                 {
-                    Trainer trainer = new Trainer(temp, canvas, new String[]{"x", "v", "theta", "ω"}, new String[]{"force"});
-                }
-            }).start();
+                    @Override
+                    public void run()
+                    {
+                        Trainer trainer = new Trainer(temp, new String[]{"x", "v", "theta", "ω"}, new String[]{"force"});
+                    }
+                }).start();
+            }
         }
     }
 

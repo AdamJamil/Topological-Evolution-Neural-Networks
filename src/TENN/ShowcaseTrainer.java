@@ -1,13 +1,17 @@
 package TENN;
 
+import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.util.Duration;
+import javazoom.jl.player.advanced.AdvancedPlayer;
 import org.apache.commons.math3.util.FastMath;
 import java.io.*;
 import java.util.ArrayList;
 
 
-class Trainer
+class ShowcaseTrainer
 {
     Timeline timeline;
     static final int networksPerGeneration = 100;
@@ -17,6 +21,8 @@ class Trainer
     int currentNeuralNetwork, currentGeneration;
 
     String[] inputNames, outputNames;
+
+    double width, height;
 
     double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
     double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
@@ -32,8 +38,6 @@ class Trainer
     static final double g = 9.81; //probably doesn't need explanation
     static final double dtOverPoleLength = dt / poleLength;
     static final double gdtOverPoleLength = g * dtOverPoleLength;
-
-    long allTimeBest = 0;
 
     long t = 0;
 
@@ -54,6 +58,7 @@ class Trainer
 
             generation[i] = new NeuralNetwork(inputNames, outputNames, inputNodeGenes, inputEdgeGenes, size);
         }
+
     }
 
     void createNextGeneration()
@@ -86,31 +91,88 @@ class Trainer
             generation[i + 50] = orderedNeuralNetworks.get(i).mutate();
     }
 
-    Trainer(int number, String[] inputNames, String[] outputNames)
+    ShowcaseTrainer(Canvas canvas, String[] inputNames, String[] outputNames)
     {
         this.inputNames = inputNames;
         this.outputNames = outputNames;
 
         initializePrimaryGeneration();
 
+        width = canvas.getWidth();
+        height = canvas.getHeight();
+
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        //boilerplate code
+        timeline = new Timeline();
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.setAutoReverse(false);
+
+        //simulation physics in this loop
+        KeyFrame frame = new KeyFrame(Duration.millis(2f), (event) ->
+        {
+            gc.clearRect(0, 0, width, height);
+
+            if (generation[0].dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
+            {
+                timeline.stop();
+                System.exit(0);
+            }
+            t++;
+
+            //kinematics
+            double output = generation[currentNeuralNetwork].execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
+
+            cartSpeed += tendt * FastMath.tanh(output / 16);
+            cartPosition += cartSpeed * dt;
+            poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
+            poleAngle = Math.acos((cartSpeed * dtOverPoleLength) + Math.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            poleAngle += poleSpeed * dt; //pole rotation due to angular speed
+
+            //setting f(x) = ax + b and forcing f(-100) = 50, f(100) = width - 50 yields
+            //f(x) = (width / 20 - 5) x + (width / 2)
+            //for aesthetics we have the cart represented as 50 px wide and 10 px tall
+            double center = ((100 - width) / 200) * cartPosition + (width / 2);
+            gc.fillRect(center - 25, 100, 50, 10);
+            gc.strokeLine(center, 100, center + poleLength * Math.cos(poleAngle), 100 - poleLength * Math.sin(poleAngle));
+            gc.fillOval(center + poleLength * Math.cos(poleAngle) - 5, 100 - poleLength * Math.sin(poleAngle) - 5, 10, 10);
+        });
+
+        //boilerplate code
+        timeline.getKeyFrames().add(frame);
+        //timeline.play();
+
+        Thread thread = new Thread(() ->
+        {
+            try
+            {
+                FileInputStream fileInputStream = new FileInputStream("song.mp3");
+                AdvancedPlayer player = new AdvancedPlayer(fileInputStream);
+                System.out.println("what");
+                player.play();
+                System.out.println("what");
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        });
+
         while (true)
         {
             if (t > 5000000)
             {
-                System.out.println("Simulation " + number + " stopped; current network fitness over 5000000");
-
-                try
-                {
-                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/success/" + number + ".txt"), "utf-8"));
-                    writer.write("Completed in " + currentGeneration + " generations." + System.getProperty("line.separator"));
-                    writer.write("Final network:" + System.getProperty("line.separator"));
-                    writer.write(generation[currentNeuralNetwork].toString());
-                    writer.close();
-                }
-                catch (Exception e)
-                {
-
-                }
+                //System.out.println(generation[currentNeuralNetwork]);
+                thread.start();
+                //hang();
+                generation[0] = generation[currentNeuralNetwork];
+                generation[0].clean();
+                t = 0;
+                cartPosition = 0;
+                cartSpeed = 1.4;
+                poleAngle = -initialAngle;
+                poleSpeed = 0;
+                timeline.play();
                 break;
             }
 
@@ -125,26 +187,9 @@ class Trainer
                 currentNeuralNetwork++;
                 if (currentNeuralNetwork == 100)
                 {
-                    allTimeBest = (allTimeBest < orderedNeuralNetworks.get(0).fitness) ? orderedNeuralNetworks.get(0).fitness : allTimeBest;
-                    if (currentGeneration == 2500)
-                    {
-                        System.out.println("Simulation " + number + " stopped; generation 2500 reached");
-                        try
-                        {
-                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
-                            writer.write("Failed after 2500 generations" + System.getProperty("line.separator"));
-                            writer.write("Best: " + allTimeBest);
-                            writer.close();
-                        }
-                        catch (Exception e)
-                        {
-
-                        }
-                        break;
-
-                    }
                     currentNeuralNetwork = 0;
                     currentGeneration++;
+                    System.out.println("generation: " + currentGeneration + ",  best: " + orderedNeuralNetworks.get(0).fitness);
                     createNextGeneration();
                     orderedNeuralNetworks.clear();
                 }
@@ -204,6 +249,18 @@ class Trainer
                     break;
                 }
             }
+        }
+    }
+
+    void hang()
+    {
+        try
+        {
+            System.in.read();
+        } catch (Exception e)
+        {
+
+
         }
     }
 }
