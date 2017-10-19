@@ -1,7 +1,6 @@
 package TENN;
 
 import javafx.animation.Timeline;
-import javafx.scene.canvas.Canvas;
 import org.apache.commons.math3.util.FastMath;
 import java.io.*;
 import java.util.ArrayList;
@@ -9,35 +8,34 @@ import java.util.ArrayList;
 
 class Trainer
 {
-    Timeline timeline;
-    static final int networksPerGeneration = 100;
+    private static final int networksPerGeneration = 100;
 
-    NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
-    ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
-    int currentNeuralNetwork, currentGeneration;
+    private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
+    private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
+    private int currentNeuralNetwork, currentGeneration;
 
-    String[] inputNames, outputNames;
+    private double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
+    private double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
+    private double poleAngle = Math.PI * 11 / 20; //range of [0, Math.PI]
+    private double poleSpeed = 0; //again no real upper or lower limit
 
-    double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
-    double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
-    double poleAngle = Math.PI * 11 / 20; //range of [0, Math.PI]
-    double poleSpeed = 0; //again no real upper or lower limit
+    private int inputs, outputs;
 
-    static final double dt = 0.02;
-    static final double tendt = 10 * dt;
-    static final double initialAngle = FastMath.PI * 11 / 20;
-    static final double leftDeadAngle = FastMath.PI * 9 / 10;
-    static final double rightDeadAngle = FastMath.PI / 10;
-    static final double poleLength = 50; //let's play with this a little before settling on a number
-    static final double g = 9.81; //probably doesn't need explanation
-    static final double dtOverPoleLength = dt / poleLength;
-    static final double gdtOverPoleLength = g * dtOverPoleLength;
+    private static final double dt = 0.02;
+    private static final double tendt = 10 * dt;
+    private static final double initialAngle = FastMath.PI * 11 / 20;
+    private static final double leftDeadAngle = FastMath.PI * 9 / 10;
+    private static final double rightDeadAngle = FastMath.PI / 10;
+    private static final double poleLength = 50; //let's play with this a little before settling on a number
+    private static final double g = 9.81; //probably doesn't need explanation
+    private static final double dtOverPoleLength = dt / poleLength;
+    private static final double gdtOverPoleLength = g * dtOverPoleLength;
 
-    long allTimeBest = 0;
+    private long allTimeBest = 0;
 
-    long t = 0;
+    private long t = 0;
 
-    void initializePrimaryGeneration()
+    private void initializePrimaryGeneration()
     {
         for (int i = 0; i < networksPerGeneration; i++)
         {
@@ -47,16 +45,16 @@ class Trainer
             EdgeGene[] inputEdgeGenes = new EdgeGene[9];
 
             for (int j = 0; j < 3; j++)
-                inputNodeGenes[j] = NodeGene.randomNodeGene(j, inputNames.length, outputNames.length, size);
+                inputNodeGenes[j] = NodeGene.randomNodeGene(inputs, outputs, size);
 
             for (int j = 0; j < 9; j++)
-                inputEdgeGenes[j] = EdgeGene.randomEdgeGene(j, size);
+                inputEdgeGenes[j] = EdgeGene.randomEdgeGene(size);
 
-            generation[i] = new NeuralNetwork(inputNames, outputNames, inputNodeGenes, inputEdgeGenes, size);
+            generation[i] = new NeuralNetwork(inputs, outputs, inputNodeGenes, inputEdgeGenes, size);
         }
     }
 
-    void createNextGeneration()
+    private void createNextGeneration()
     {
         //top 1 - 5: 1 clone, 2 mutations : 15
         //top 6 - 20: 3 mutations         : 45
@@ -86,10 +84,10 @@ class Trainer
             generation[i + 50] = orderedNeuralNetworks.get(i).mutate();
     }
 
-    Trainer(int number, String[] inputNames, String[] outputNames)
+    Trainer(int number, int inputs, int outputs)
     {
-        this.inputNames = inputNames;
-        this.outputNames = outputNames;
+        this.inputs = inputs;
+        this.outputs = outputs;
 
         initializePrimaryGeneration();
 
@@ -101,7 +99,7 @@ class Trainer
 
                 try
                 {
-                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/success/" + number + ".txt"), "utf-8"));
+                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment4/success/" + currentGeneration + ".txt"), "utf-8"));
                     writer.write("Completed in " + currentGeneration + " generations." + System.getProperty("line.separator"));
                     writer.write("Final network:" + System.getProperty("line.separator"));
                     writer.write(generation[currentNeuralNetwork].toString());
@@ -109,7 +107,7 @@ class Trainer
                 }
                 catch (Exception e)
                 {
-
+                    e.printStackTrace();
                 }
                 break;
             }
@@ -126,19 +124,19 @@ class Trainer
                 if (currentNeuralNetwork == 100)
                 {
                     allTimeBest = (allTimeBest < orderedNeuralNetworks.get(0).fitness) ? orderedNeuralNetworks.get(0).fitness : allTimeBest;
-                    if (currentGeneration == 2500)
+                    if (currentGeneration == 1000)
                     {
-                        System.out.println("Simulation " + number + " stopped; generation 2500 reached");
+                        System.out.println("Simulation " + number + " stopped; generation 1000 reached");
                         try
                         {
-                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment2/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
+                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment4/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
                             writer.write("Failed after 2500 generations" + System.getProperty("line.separator"));
                             writer.write("Best: " + allTimeBest);
                             writer.close();
                         }
                         catch (Exception e)
                         {
-
+                            e.printStackTrace();
                         }
                         break;
 
@@ -173,7 +171,7 @@ class Trainer
     }
 
     //binary search function
-    void insertNetwork()
+    private void insertNetwork()
     {
         int left = 0, right = currentNeuralNetwork - 1, middle;
 

@@ -6,7 +6,7 @@ class Edge extends Executable
     Node outgoingNode;
     double weight;
 
-    String name;
+    int name;
 
     public void execute()
     {
@@ -21,6 +21,6 @@ class Edge extends Executable
     @Override
     public String toString()
     {
-        return name;
+        return Integer.toString(name);
     }
 }

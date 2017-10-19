@@ -9,15 +9,15 @@ class NodeGene
     Node node;
     short position; //position in boxes
 
-    static final double mutationMultiplier = 1.5;
-    static final double changeActivationType = 0.1 * mutationMultiplier;
-    static final double changeAC1 = 0.4 * mutationMultiplier;
-    static final double changeAC2 = 0.4 * mutationMultiplier;
-    static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
+    private static final double mutationMultiplier = 1.5;
+    private static final double changeActivationType = 0.1 * mutationMultiplier;
+    private static final double changeAC1 = 0.4 * mutationMultiplier;
+    private static final double changeAC2 = 0.4 * mutationMultiplier;
+    private static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
 
-    static int nodeGenes = 0;
+    private static int nodeGenes = 0;
 
-    NodeGene()
+    private NodeGene()
     {
         node = new Node();
     }
@@ -70,14 +70,14 @@ class NodeGene
     }
 
 
-    static NodeGene randomNodeGene(int number, int inputs, int outputs, int size)
+    static NodeGene randomNodeGene(int inputs, int outputs, int size)
     {
         NodeGene nodeGene = new NodeGene();
 
         nodeGene.node.activationType = (short) (FastMath.random() * 8);
         nodeGene.node.AC1 = FastMath.random() * 20 - 10;
         nodeGene.node.AC2 = FastMath.random() * 4 - 2;
-        nodeGene.node.name = "node " + nodeGenes;
+        nodeGene.node.name = nodeGenes;
         nodeGene.position = (short) (inputs + (FastMath.random() * (size - inputs - outputs)));
 
         nodeGenes++;

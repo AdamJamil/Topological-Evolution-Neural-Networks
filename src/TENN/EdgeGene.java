@@ -10,13 +10,13 @@ class EdgeGene
     short incomingNode;
     short outgoingNode;
 
-    static final double mutationMultiplier = 1.5;
-    static final double changeWeight = 0.4 * mutationMultiplier;
-    static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
+    private static final double mutationMultiplier = 1.5;
+    private static final double changeWeight = 0.4 * mutationMultiplier;
+    private static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
 
-    static int edgeGenes = 0;
+    private static int edgeGenes = 0;
 
-    EdgeGene(short incomingNode, short outgoingNode)
+    private EdgeGene(short incomingNode, short outgoingNode)
     {
         edge = new Edge();
 
@@ -49,11 +49,11 @@ class EdgeGene
         return clonedEdgeGene;
     }
 
-    static EdgeGene randomEdgeGene(int number, int size)
+    static EdgeGene randomEdgeGene(int size)
     {
         EdgeGene edgeGene = new EdgeGene((short) (FastMath.random() * size), (short) (FastMath.random() * size));
         edgeGene.edge.weight = -10 + (20 * FastMath.random());
-        edgeGene.edge.name = "edge " + edgeGenes;
+        edgeGene.edge.name = edgeGenes;
         edgeGenes++;
 
         return edgeGene;

@@ -28,7 +28,7 @@ class Node extends Executable
     double residue; //sum of all inputs
     double val; //result of activation function
 
-    String name;
+    int name;
 
     void execute()
     {
@@ -90,7 +90,7 @@ class Node extends Executable
         activationType = 0;
     }
 
-    Node(String name)
+    Node(int name)
     {
         this();
         this.name = name;
@@ -99,7 +99,15 @@ class Node extends Executable
     @Override
     public String toString()
     {
-        return name;
+        if (name < 0)
+        {
+            int temp = -(name + 1);
+            if (temp >= Main.inputs.length)
+                return Main.outputs[temp - Main.inputs.length];
+            else
+                return Main.inputs[temp];
+        }
+        return "" + NeuralNetwork.alphabet.charAt(name);
     }
 }
 

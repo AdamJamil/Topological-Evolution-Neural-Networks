@@ -4,44 +4,46 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import org.apache.commons.math3.util.FastMath;
 import java.io.*;
 import java.util.ArrayList;
 
-
 class ShowcaseTrainer
 {
-    Timeline timeline;
-    static final int networksPerGeneration = 100;
+    private Timeline timeline;
+    private static final int networksPerGeneration = 100;
 
-    NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
-    ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
-    int currentNeuralNetwork, currentGeneration;
+    private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
+    private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
+    private int currentNeuralNetwork, currentGeneration;
 
-    String[] inputNames, outputNames;
+    private int inputs, outputs;
 
-    double width, height;
+    private double width, height;
 
-    double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
-    double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
-    double poleAngle = Math.PI * 11 / 20; //range of [0, Math.PI]
-    double poleSpeed = 0; //again no real upper or lower limit
+    private double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
+    private double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
+    private double poleAngle = Math.PI * 11 / 20; //range of [0, Math.PI]
+    private double poleSpeed = 0; //again no real upper or lower limit
 
-    static final double dt = 0.02;
-    static final double tendt = 10 * dt;
-    static final double initialAngle = FastMath.PI * 11 / 20;
-    static final double leftDeadAngle = FastMath.PI * 9 / 10;
-    static final double rightDeadAngle = FastMath.PI / 10;
-    static final double poleLength = 50; //let's play with this a little before settling on a number
-    static final double g = 9.81; //probably doesn't need explanation
-    static final double dtOverPoleLength = dt / poleLength;
-    static final double gdtOverPoleLength = g * dtOverPoleLength;
+    private static final double dt = 0.02;
+    private static final double tendt = 10 * dt;
+    private static final double initialAngle = FastMath.PI * 11 / 20;
+    private static final double leftDeadAngle = FastMath.PI * 9 / 10;
+    private static final double rightDeadAngle = FastMath.PI / 10;
+    private static final double poleLength = 50; //let's play with this a little before settling on a number
+    private static final double g = 9.81; //probably doesn't need explanation
+    private static final double dtOverPoleLength = dt / poleLength;
+    private static final double gdtOverPoleLength = g * dtOverPoleLength;
 
-    long t = 0;
+    private NeuralNetwork finalNet;
 
-    void initializePrimaryGeneration()
+    private long t = 0;
+
+    private void initializePrimaryGeneration()
     {
         for (int i = 0; i < networksPerGeneration; i++)
         {
@@ -51,17 +53,16 @@ class ShowcaseTrainer
             EdgeGene[] inputEdgeGenes = new EdgeGene[9];
 
             for (int j = 0; j < 3; j++)
-                inputNodeGenes[j] = NodeGene.randomNodeGene(j, inputNames.length, outputNames.length, size);
+                inputNodeGenes[j] = NodeGene.randomNodeGene(inputs, outputs, size);
 
             for (int j = 0; j < 9; j++)
-                inputEdgeGenes[j] = EdgeGene.randomEdgeGene(j, size);
+                inputEdgeGenes[j] = EdgeGene.randomEdgeGene(size);
 
-            generation[i] = new NeuralNetwork(inputNames, outputNames, inputNodeGenes, inputEdgeGenes, size);
+            generation[i] = new NeuralNetwork(inputs, outputs, inputNodeGenes, inputEdgeGenes, size);
         }
-
     }
 
-    void createNextGeneration()
+    private void createNextGeneration()
     {
         //top 1 - 5: 1 clone, 2 mutations : 15
         //top 6 - 20: 3 mutations         : 45
@@ -69,6 +70,7 @@ class ShowcaseTrainer
         //top 31 - 50: 1 mutation         : 20
         for (int i = 0; i < 5; i++)
         {
+            orderedNeuralNetworks.get(i).clean();
             generation[i * 3] = orderedNeuralNetworks.get(i);
             generation[i * 3 + 1] = orderedNeuralNetworks.get(i).mutate();
             generation[i * 3 + 2] = orderedNeuralNetworks.get(i).mutate();
@@ -91,10 +93,16 @@ class ShowcaseTrainer
             generation[i + 50] = orderedNeuralNetworks.get(i).mutate();
     }
 
-    ShowcaseTrainer(Canvas canvas, String[] inputNames, String[] outputNames)
+    private void run()
     {
-        this.inputNames = inputNames;
-        this.outputNames = outputNames;
+        System.out.println(finalNet);
+        timeline.play();
+    }
+
+    ShowcaseTrainer(Stage stage, Canvas canvas, int inputs, int outputs)
+    {
+        this.inputs = inputs;
+        this.outputs = outputs;
 
         initializePrimaryGeneration();
 
@@ -121,7 +129,7 @@ class ShowcaseTrainer
             t++;
 
             //kinematics
-            double output = generation[currentNeuralNetwork].execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
+            double output = finalNet.execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
 
             cartSpeed += tendt * FastMath.tanh(output / 16);
             cartPosition += cartSpeed * dt;
@@ -148,9 +156,7 @@ class ShowcaseTrainer
             {
                 FileInputStream fileInputStream = new FileInputStream("song.mp3");
                 AdvancedPlayer player = new AdvancedPlayer(fileInputStream);
-                System.out.println("what");
                 player.play();
-                System.out.println("what");
             }
             catch (Exception e)
             {
@@ -164,15 +170,16 @@ class ShowcaseTrainer
             {
                 //System.out.println(generation[currentNeuralNetwork]);
                 thread.start();
-                //hang();
-                generation[0] = generation[currentNeuralNetwork];
-                generation[0].clean();
+                finalNet = generation[currentNeuralNetwork];
+                finalNet.clean();
                 t = 0;
                 cartPosition = 0;
-                cartSpeed = 1.4;
-                poleAngle = -initialAngle;
+                cartSpeed = -1;
+                poleAngle = initialAngle;
                 poleSpeed = 0;
-                timeline.play();
+
+                hang();
+                run();
                 break;
             }
 
@@ -192,6 +199,19 @@ class ShowcaseTrainer
                     System.out.println("generation: " + currentGeneration + ",  best: " + orderedNeuralNetworks.get(0).fitness);
                     createNextGeneration();
                     orderedNeuralNetworks.clear();
+
+                    if (currentGeneration == 200)
+                    {
+                        try
+                        {
+                            new Main().start(stage);
+                        }
+                        catch (Exception e)
+                        {
+                            e.printStackTrace();
+                        }
+                        break;
+                    }
                 }
 
                 t = 0;
@@ -213,12 +233,10 @@ class ShowcaseTrainer
             poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
         }
-
-        //runGeneration();
     }
 
     //binary search function
-    void insertNetwork()
+    private void insertNetwork()
     {
         int left = 0, right = currentNeuralNetwork - 1, middle;
 
@@ -252,15 +270,15 @@ class ShowcaseTrainer
         }
     }
 
-    void hang()
+    private void hang()
     {
         try
         {
             System.in.read();
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
-
-
+            e.printStackTrace();
         }
     }
 }

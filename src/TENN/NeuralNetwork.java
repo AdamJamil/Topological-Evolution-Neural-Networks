@@ -1,48 +1,45 @@
 package TENN;
 
 import org.apache.commons.math3.util.FastMath;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
 class NeuralNetwork
 {
-    static final double mutationMultiplier = 1.5;
-    static final double addNode = 0.2 * mutationMultiplier;
-    static final double addEdge = 0.3 * mutationMultiplier;
-    static final double increaseSize = 0.20 * mutationMultiplier;
-    static final double mutateEdge = 0.35 * mutationMultiplier;
-    static final double mutateNode = 0.35 * mutationMultiplier;
+    private static final double mutationMultiplier = 1.5;
+    private static final double addNode = 0.2 * mutationMultiplier;
+    private static final double addEdge = 0.3 * mutationMultiplier;
+    private static final double increaseSize = 0.20 * mutationMultiplier;
+    private static final double mutateEdge = 0.35 * mutationMultiplier;
+    private static final double mutateNode = 0.35 * mutationMultiplier;
     static final String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    int nodeCounter = 0;
-    int edgeCounter = 0;
+    private int nodeCounter = 0;
+    private int edgeCounter = 0;
 
     long fitness; //number of frames survived for
 
     boolean dead; //if something goes wrong during "birth", the NN is dead
-    boolean hitOutput; //keeps track if an output has been hit during traveral. if not, then NN is killed
-    boolean selected = true;
+    private boolean hitOutput; //keeps track if an output has been hit during traveral. if not, then NN is killed
 
-    short outputs;
+    private int inputs, outputs;
 
-    ArrayList<Node> nodes = new ArrayList<>(); //stores every node from NodeGenes
-    Node[] boxes; //sparse array of nodes. every edge will connect to an entry, and if that entry has a node, it connects to that node
+    private ArrayList<Node> nodes = new ArrayList<>(); //stores every node from NodeGenes
+    private Node[] boxes; //sparse array of nodes. every edge will connect to an entry, and if that entry has a node, it connects to that node
     //this means edges might connect to nothing, but it preserves existing connections better across mutations
 
-    String[] inputNames, outputNames;
-    NodeGene[] nodeGenes;
-    EdgeGene[] edgeGenes;
-    short size; //size of boxes array. it should be small at first to ensure that at least some edges connect to something
+    private NodeGene[] nodeGenes;
+    private EdgeGene[] edgeGenes;
+    private short size; //size of boxes array. it should be small at first to ensure that at least some edges connect to something
 
-    ArrayList<Executable> orderedExecutables = new ArrayList<>(); //contains nodes and edges, in the order that they should be executed in
-    ArrayList<Edge> recurrentEdges = new ArrayList<>(); //contains all the edges that will link to the next execute call
+    private ArrayList<Executable> orderedExecutables = new ArrayList<>(); //contains nodes and edges, in the order that they should be executed in
+    private ArrayList<Edge> recurrentEdges = new ArrayList<>(); //contains all the edges that will link to the next execute call
 
-    ArrayList<Node> stack = new ArrayList<>(); //mostly a temporary arraylist used in the traverse method
+    private ArrayList<Node> stack = new ArrayList<>(); //mostly a temporary arraylist used in the traverse method
 
-    Node[] inLayer;
-    Node[] outLayer;
+    private Node[] inLayer;
+    private Node[] outLayer;
 
     double[] execute(double[] input)
     {
@@ -73,26 +70,25 @@ class NeuralNetwork
         return result;
     }
 
-    NeuralNetwork(String[] inputNames, String[] outputNames, NodeGene[] inputNodeGenes, EdgeGene[] inputEdgeGenes, short inputSize)
+    NeuralNetwork(int inputs, int outputs, NodeGene[] inputNodeGenes, EdgeGene[] inputEdgeGenes, short inputSize)
     {
-        this.inputNames = inputNames;
-        this.outputNames = outputNames;
         nodeGenes = inputNodeGenes;
         edgeGenes = inputEdgeGenes;
         size = inputSize;
         boxes = new Node[size];
 
-        outputs = (short) outputNames.length;
+        this.outputs = outputs;
+        this.inputs = inputs;
 
-        inLayer = new Node[inputNames.length];
-        outLayer = new Node[outputNames.length];
+        inLayer = new Node[inputs];
+        outLayer = new Node[outputs];
 
         for (int i = 0; i < inLayer.length; i++)
-            inLayer[i] = new Node(inputNames[i]);
+            inLayer[i] = new Node(-i);
 
         for (int i = 0; i < outLayer.length; i++)
         {
-            outLayer[i] = new Node(outputNames[i]);
+            outLayer[i] = new Node(-i - inputs);
             outLayer[i].output = true;
         }
 
@@ -168,9 +164,9 @@ class NeuralNetwork
         orderedExecutables.removeAll(Arrays.asList(outLayer));
     }
 
-    boolean traverse(Edge edge)
+    private boolean traverse(Edge edge)
     {
-        edge.name = Integer.toString(edgeCounter);
+        edge.name = edgeCounter;
         edgeCounter++;
 
         if (edge.outgoingNode.output)
@@ -193,7 +189,7 @@ class NeuralNetwork
 
         if (!edge.outgoingNode.output)
         {
-            edge.outgoingNode.name = "" + alphabet.charAt(nodeCounter);
+            edge.outgoingNode.name = nodeCounter;
             nodeCounter++;
         }
         edge.outgoingNode.visited = true;
@@ -212,7 +208,6 @@ class NeuralNetwork
         stack.remove(edge.outgoingNode);
 
         return edge.outgoingNode.reachesOutput;
-
     }
 
     NeuralNetwork mutate()
@@ -238,7 +233,7 @@ class NeuralNetwork
                 mutatedNodeGenes[i] = nodeGenes[i].actualCloneBecauseJavaIsWrittenByPajeets();
 
         for (int i = nodeGenes.length; i < numberOfNodeGenes; i++)
-            mutatedNodeGenes[i] = NodeGene.randomNodeGene(i, inputNames.length, outputNames.length, mutatedSize);
+            mutatedNodeGenes[i] = NodeGene.randomNodeGene(inputs, outputs, mutatedSize);
 
         for (int i = 0; i < edgeGenes.length; i++)
             if (FastMath.random() < mutateEdge)
@@ -247,10 +242,10 @@ class NeuralNetwork
                 mutatedEdgeGenes[i] = edgeGenes[i].actualCloneBecauseJavaIsWrittenByPajeets();
 
         for (int i = edgeGenes.length; i < numberOfEdgeGenes; i++)
-            mutatedEdgeGenes[i] = EdgeGene.randomEdgeGene(i, mutatedSize);
+            mutatedEdgeGenes[i] = EdgeGene.randomEdgeGene(mutatedSize);
 
-        NeuralNetwork tempNeuralNetwork = new NeuralNetwork(inputNames, outputNames, mutatedNodeGenes, mutatedEdgeGenes, (short) mutatedSize);
-        if (mutatedSize < inputNames.length + outputNames.length)
+        NeuralNetwork tempNeuralNetwork = new NeuralNetwork(inputs, outputs, mutatedNodeGenes, mutatedEdgeGenes, (short) mutatedSize);
+        if (mutatedSize < inputs + outputs)
         {
             //System.out.println("dead 5");
             tempNeuralNetwork.dead = true;
@@ -265,7 +260,7 @@ class NeuralNetwork
                 clean(outgoingEdge.outgoingNode);
     }
 
-    void clean(Node temp)
+    private void clean(Node temp)
     {
         if (temp.cleaned)
             return;
