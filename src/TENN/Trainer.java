@@ -9,7 +9,7 @@ class Trainer
 {
     private static final int networksPerGeneration = 100;
 
-    private long[] bests = new long[1000];
+    private long[] bests = new long[1001];
 
     private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
     private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
@@ -54,6 +54,8 @@ class Trainer
 
             generation[i] = new NeuralNetwork(inputs, outputs, inputNodeGenes, inputEdgeGenes, size);
         }
+
+        neuralNetwork = generation[0];
     }
 
     private void createNextGeneration()
@@ -104,7 +106,7 @@ class Trainer
                 {
                     Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment7/success/" + currentGeneration + ".txt"), "utf-8"));
                     for (int i = 0; i < currentGeneration - 1; i++)
-                        writer.write(bests[i] + "");
+                        writer.write(bests[i] + System.getProperty("line.separator"));
                     writer.write("Final network:" + System.getProperty("line.separator"));
                     writer.close();
                 }
@@ -127,7 +129,7 @@ class Trainer
                 if (currentNeuralNetworkIndex == 100)
                 {
                     allTimeBest = (allTimeBest < orderedNeuralNetworks.get(0).fitness) ? orderedNeuralNetworks.get(0).fitness : allTimeBest;
-                    bests[currentGeneration - 1] = orderedNeuralNetworks.get(0).fitness;
+                    bests[currentGeneration] = orderedNeuralNetworks.get(0).fitness;
                     if (currentGeneration == 1000)
                     {
                         System.out.println("Simulation " + number + " stopped; generation 1000 reached");
@@ -135,7 +137,7 @@ class Trainer
                         {
                             Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment7/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
                             for (int i = 0; i < 1000; i++)
-                                writer.write(bests[i] + "\n");
+                                writer.write(bests[i] + System.getProperty("line.separator"));
                             writer.close();
                         }
                         catch (Exception e)
@@ -163,7 +165,7 @@ class Trainer
             t++;
 
             //kinematics
-            double output = neuralNetwork.execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
+            double output = neuralNetwork.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0];
 
             cartSpeed += tendt * tanh(output / 16);
             cartPosition += cartSpeed * dt;
@@ -217,6 +219,10 @@ class Trainer
 
     private static double exp(double val)
     {
+        if (val < -700)
+            return 0;
+        if (val > 700)
+            val = 700;
         final long tmp = (long) (1512775 * val + (1072693248 - 60801));
         return Double.longBitsToDouble(tmp << 32);
     }

@@ -10,7 +10,7 @@ import javafx.stage.Stage;
 
 public class Main extends Application
 {
-    private static final boolean showcaseMode = true;
+    private static final boolean showcaseMode = false;
     static final String[] inputs = new String[]{"x", "v", "theta", "ω"};
     static final String[] outputs = new String[]{"force"};
 
@@ -34,15 +34,10 @@ public class Main extends Application
     {
         if (showcaseMode)
             launch(args);
-        else
+        else for (int i = 0; i < 100; i++)
         {
-            for (int i = 0; i < 100; i++)
-            {
-                final int temp = i;
-                new Thread(() ->
-                        new Trainer(temp, 4, 1)
-                ).start();
-            }
+            final int temp = i;
+            new Thread(() -> new Trainer(temp, 4, 1)).start();
         }
     }
 }

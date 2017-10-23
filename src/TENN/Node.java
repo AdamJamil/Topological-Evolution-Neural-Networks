@@ -15,13 +15,8 @@ class Node extends Executable
     boolean reachesOutput = false;
 
     double AC1; //activation constant 1; range bounded to [0, 10], used as a multiplicative constant
-
     double AC2; //activation constant 2; range bounded to [0, 2]. idea is to have
     //equal chance of squashing (x \in [-1, 1]$ and stretching (x \not \in [-1, 1])
-
-    //the reason for using independent variables for the sign of the constants is
-    //1) omit Math.abs() calls
-    //2) more control during mutation
 
     short activationType; //range [0, 8] \cap \nat
 
@@ -105,12 +100,12 @@ class Node extends Executable
         return "" + NeuralNetwork.alphabet.charAt(name);
     }
 
-    public static double tanh(double val)
+    private static double tanh(double val)
     {
         return (exp(2 * val) - 1) / (exp(2 * val) + 1);
     }
 
-    public static double exp(double val)
+    private static double exp(double val)
     {
         if (val < -700)
             return 0;
@@ -120,4 +115,3 @@ class Node extends Executable
         return Double.longBitsToDouble(tmp << 32);
     }
 }
-
