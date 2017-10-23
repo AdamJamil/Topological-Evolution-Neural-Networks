@@ -1,8 +1,8 @@
 package TENN;
 
+import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.apache.commons.math3.random.GaussianRandomGenerator;
 import org.apache.commons.math3.random.MersenneTwister;
-import org.apache.commons.math3.util.FastMath;
 
 class EdgeGene
 {
@@ -16,6 +16,8 @@ class EdgeGene
 
     private static int edgeGenes = 0;
 
+    private static XoRoShiRo128PlusRandom uniformRandom = new XoRoShiRo128PlusRandom();
+
     private EdgeGene(short incomingNode, short outgoingNode)
     {
         edge = new Edge();
@@ -28,7 +30,7 @@ class EdgeGene
     {
         EdgeGene tempEdgeGene = actualCloneBecauseJavaIsWrittenByPajeets();
 
-        if (FastMath.random() < changeWeight)
+        if (uniformRandom.nextDoubleFast() < changeWeight)
         {
             double mutatedWeight = (3.33 * random.nextNormalizedDouble()) + tempEdgeGene.edge.weight;
             if (mutatedWeight > 10)
@@ -51,8 +53,8 @@ class EdgeGene
 
     static EdgeGene randomEdgeGene(int size)
     {
-        EdgeGene edgeGene = new EdgeGene((short) (FastMath.random() * size), (short) (FastMath.random() * size));
-        edgeGene.edge.weight = -10 + (20 * FastMath.random());
+        EdgeGene edgeGene = new EdgeGene((short) (uniformRandom.nextDoubleFast() * size), (short) (uniformRandom.nextDoubleFast() * size));
+        edgeGene.edge.weight = -10 + (20 * uniformRandom.nextDoubleFast());
         edgeGene.edge.name = edgeGenes;
         edgeGenes++;
 

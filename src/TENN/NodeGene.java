@@ -2,7 +2,8 @@ package TENN;
 
 import org.apache.commons.math3.random.GaussianRandomGenerator;
 import org.apache.commons.math3.random.MersenneTwister;
-import org.apache.commons.math3.util.FastMath;
+import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
+
 
 class NodeGene
 {
@@ -14,6 +15,7 @@ class NodeGene
     private static final double changeAC1 = 0.4 * mutationMultiplier;
     private static final double changeAC2 = 0.4 * mutationMultiplier;
     private static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
+    private static final XoRoShiRo128PlusRandom uniformRandom = new XoRoShiRo128PlusRandom();
 
     private static int nodeGenes = 0;
 
@@ -26,10 +28,10 @@ class NodeGene
     {
         NodeGene tempNodeGene = actualCloneBecauseJavaIsWrittenByPajeets();
 
-        if (FastMath.random() < changeActivationType)
-            tempNodeGene.node.activationType = (short) (FastMath.random() * 8);
+        if (uniformRandom.nextDoubleFast() < changeActivationType)
+            tempNodeGene.node.activationType = (short) (uniformRandom.nextDoubleFast() * 8);
 
-        if (FastMath.random() < changeAC1)
+        if (uniformRandom.nextDoubleFast() < changeAC1)
         {
             double mutatedAC1 = (2.5 * random.nextNormalizedDouble()) + tempNodeGene.node.AC1;
             if (mutatedAC1 > 10)
@@ -39,7 +41,7 @@ class NodeGene
             tempNodeGene.node.AC1 = mutatedAC1;
         }
 
-        if (FastMath.random() < changeAC2)
+        if (uniformRandom.nextDoubleFast() < changeAC2)
         {
             double mutatedAC2 = (0.5 * random.nextNormalizedDouble()) + tempNodeGene.node.AC2;
             if (mutatedAC2 > 2)
@@ -74,11 +76,11 @@ class NodeGene
     {
         NodeGene nodeGene = new NodeGene();
 
-        nodeGene.node.activationType = (short) (FastMath.random() * 8);
-        nodeGene.node.AC1 = FastMath.random() * 20 - 10;
-        nodeGene.node.AC2 = FastMath.random() * 4 - 2;
+        nodeGene.node.activationType = (short) (uniformRandom.nextDoubleFast() * 8);
+        nodeGene.node.AC1 = uniformRandom.nextDoubleFast() * 20 - 10;
+        nodeGene.node.AC2 = uniformRandom.nextDoubleFast() * 4 - 2;
         nodeGene.node.name = nodeGenes;
-        nodeGene.position = (short) (inputs + (FastMath.random() * (size - inputs - outputs)));
+        nodeGene.position = (short) (inputs + (uniformRandom.nextDoubleFast() * (size - inputs - outputs)));
 
         nodeGenes++;
 

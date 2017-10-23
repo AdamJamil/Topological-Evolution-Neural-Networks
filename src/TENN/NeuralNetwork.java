@@ -1,5 +1,6 @@
 package TENN;
 
+import it.unimi.dsi.util.XoRoShiRo128PlusRandom;
 import org.apache.commons.math3.util.FastMath;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,10 +42,12 @@ class NeuralNetwork
     private Node[] inLayer;
     private Node[] outLayer;
 
-    double[] execute(double[] input)
+    private static XoRoShiRo128PlusRandom uniformRandom = new XoRoShiRo128PlusRandom();
+
+    double[] execute(double... input)
     {
         //loads input values into the corresponding nodes
-        for (int i = 0; i < input.length; i++)
+        for (int i = 0; i < inputs; i++)
             boxes[i].val = input[i];
 
         //executes all nodes and edges in order. this gives us the output
@@ -88,7 +91,7 @@ class NeuralNetwork
 
         for (int i = 0; i < outLayer.length; i++)
         {
-            outLayer[i] = new Node(-i - inputs);
+            outLayer[i] = new Node(-i);
             outLayer[i].output = true;
         }
 
@@ -216,18 +219,18 @@ class NeuralNetwork
         int numberOfEdgeGenes = edgeGenes.length;
         int mutatedSize = size;
 
-        while (FastMath.random() < addNode)
+        while (uniformRandom.nextDoubleFast() < addNode)
             numberOfNodeGenes++;
-        while (FastMath.random() < addEdge)
+        while (uniformRandom.nextDoubleFast() < addEdge)
             numberOfEdgeGenes++;
-        if (FastMath.random() < increaseSize)
-            mutatedSize = (int) (10 * FastMath.random()) + size;
+        if (uniformRandom.nextDoubleFast() < increaseSize)
+            mutatedSize = (int) (10 * uniformRandom.nextDoubleFast()) + size;
 
         NodeGene[] mutatedNodeGenes = new NodeGene[numberOfNodeGenes];
         EdgeGene[] mutatedEdgeGenes = new EdgeGene[numberOfEdgeGenes];
 
         for (int i = 0; i < nodeGenes.length; i++)
-            if (FastMath.random() < mutateNode)
+            if (uniformRandom.nextDoubleFast() < mutateNode)
                 mutatedNodeGenes[i] = nodeGenes[i].mutate();
             else
                 mutatedNodeGenes[i] = nodeGenes[i].actualCloneBecauseJavaIsWrittenByPajeets();
@@ -236,7 +239,7 @@ class NeuralNetwork
             mutatedNodeGenes[i] = NodeGene.randomNodeGene(inputs, outputs, mutatedSize);
 
         for (int i = 0; i < edgeGenes.length; i++)
-            if (FastMath.random() < mutateEdge)
+            if (uniformRandom.nextDoubleFast() < mutateEdge)
                 mutatedEdgeGenes[i] = edgeGenes[i].mutate();
             else
                 mutatedEdgeGenes[i] = edgeGenes[i].actualCloneBecauseJavaIsWrittenByPajeets();

@@ -1,6 +1,5 @@
 package TENN;
 
-import javafx.animation.Timeline;
 import org.apache.commons.math3.util.FastMath;
 import java.io.*;
 import java.util.ArrayList;
@@ -10,9 +9,12 @@ class Trainer
 {
     private static final int networksPerGeneration = 100;
 
+    private long[] bests = new long[1000];
+
     private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
     private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
-    private int currentNeuralNetwork, currentGeneration;
+    private int currentNeuralNetworkIndex, currentGeneration;
+    private NeuralNetwork neuralNetwork;
 
     private double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
     private double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
@@ -62,6 +64,7 @@ class Trainer
         //top 31 - 50: 1 mutation         : 20
         for (int i = 0; i < 5; i++)
         {
+            orderedNeuralNetworks.get(i).clean();
             generation[i * 3] = orderedNeuralNetworks.get(i);
             generation[i * 3 + 1] = orderedNeuralNetworks.get(i).mutate();
             generation[i * 3 + 2] = orderedNeuralNetworks.get(i).mutate();
@@ -99,10 +102,10 @@ class Trainer
 
                 try
                 {
-                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment4/success/" + currentGeneration + ".txt"), "utf-8"));
-                    writer.write("Completed in " + currentGeneration + " generations." + System.getProperty("line.separator"));
+                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment7/success/" + currentGeneration + ".txt"), "utf-8"));
+                    for (int i = 0; i < currentGeneration - 1; i++)
+                        writer.write(bests[i] + "");
                     writer.write("Final network:" + System.getProperty("line.separator"));
-                    writer.write(generation[currentNeuralNetwork].toString());
                     writer.close();
                 }
                 catch (Exception e)
@@ -112,26 +115,27 @@ class Trainer
                 break;
             }
 
-            if (generation[currentNeuralNetwork].dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
+            if (neuralNetwork.dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
             {
-                generation[currentNeuralNetwork].fitness = t;
-                if (currentNeuralNetwork == 0)
+                neuralNetwork.fitness = t;
+                if (currentNeuralNetworkIndex == 0)
                     orderedNeuralNetworks.add(generation[0]);
                 else
                     insertNetwork();
 
-                currentNeuralNetwork++;
-                if (currentNeuralNetwork == 100)
+                currentNeuralNetworkIndex++;
+                if (currentNeuralNetworkIndex == 100)
                 {
                     allTimeBest = (allTimeBest < orderedNeuralNetworks.get(0).fitness) ? orderedNeuralNetworks.get(0).fitness : allTimeBest;
+                    bests[currentGeneration - 1] = orderedNeuralNetworks.get(0).fitness;
                     if (currentGeneration == 1000)
                     {
                         System.out.println("Simulation " + number + " stopped; generation 1000 reached");
                         try
                         {
-                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment4/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
-                            writer.write("Failed after 2500 generations" + System.getProperty("line.separator"));
-                            writer.write("Best: " + allTimeBest);
+                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment7/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
+                            for (int i = 0; i < 1000; i++)
+                                writer.write(bests[i] + "\n");
                             writer.close();
                         }
                         catch (Exception e)
@@ -141,12 +145,13 @@ class Trainer
                         break;
 
                     }
-                    currentNeuralNetwork = 0;
+                    currentNeuralNetworkIndex = 0;
                     currentGeneration++;
                     createNextGeneration();
                     orderedNeuralNetworks.clear();
                 }
 
+                neuralNetwork = generation[currentNeuralNetworkIndex];
                 t = 0;
                 cartPosition = 0;
                 cartSpeed = -1;
@@ -158,9 +163,9 @@ class Trainer
             t++;
 
             //kinematics
-            double output = generation[currentNeuralNetwork].execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
+            double output = neuralNetwork.execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
 
-            cartSpeed += tendt * FastMath.tanh(output / 16);
+            cartSpeed += tendt * tanh(output / 16);
             cartPosition += cartSpeed * dt;
             poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
             poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
@@ -173,7 +178,7 @@ class Trainer
     //binary search function
     private void insertNetwork()
     {
-        int left = 0, right = currentNeuralNetwork - 1, middle;
+        int left = 0, right = currentNeuralNetworkIndex - 1, middle;
 
         while (true)
         {
@@ -181,7 +186,7 @@ class Trainer
             long temp = orderedNeuralNetworks.get(middle).fitness;
             if (t == temp)
             {
-                orderedNeuralNetworks.add(middle, generation[currentNeuralNetwork]);
+                orderedNeuralNetworks.add(middle, neuralNetwork);
                 break;
             }
             else if (t > temp)
@@ -189,7 +194,7 @@ class Trainer
                 right = middle - 1;
                 if (left > right)
                 {
-                    orderedNeuralNetworks.add(middle, generation[currentNeuralNetwork]);
+                    orderedNeuralNetworks.add(middle, neuralNetwork);
                     break;
                 }
             }
@@ -198,10 +203,21 @@ class Trainer
                 left = middle + 1;
                 if (left > right)
                 {
-                    orderedNeuralNetworks.add(middle + 1, generation[currentNeuralNetwork]);
+                    orderedNeuralNetworks.add(middle + 1, neuralNetwork);
                     break;
                 }
             }
         }
+    }
+
+    private static double tanh(double val)
+    {
+        return (exp(2 * val) - 1) / (exp(2 * val) + 1);
+    }
+
+    private static double exp(double val)
+    {
+        final long tmp = (long) (1512775 * val + (1072693248 - 60801));
+        return Double.longBitsToDouble(tmp << 32);
     }
 }

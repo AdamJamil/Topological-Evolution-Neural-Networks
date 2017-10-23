@@ -32,7 +32,6 @@ class Node extends Executable
 
     void execute()
     {
-
         if (residue > 2000000000)
             residue = 2000000000;
         if (residue < -2000000000)
@@ -44,42 +43,42 @@ class Node extends Executable
             //identity (linear) activation function
             case 0:
                 val = AC1 * AC2 * residue;
-                break;
+            break;
 
             //piecewise linear, referred to as hardtanh
             case 1:
                 val = AC1 * FastMath.max(-1, FastMath.min(1, FastMath.abs(AC2) * residue));
-                break;
+            break;
 
             //step function
             case 2:
                 val = AC1 * (1 + FastMath.signum(AC2 * residue)) / 2;
-                break;
+            break;
 
             //bipolar (step function with -1 instead of 0 as output)
             case 3:
                 val = AC1 * FastMath.signum(AC2 * residue);
-                break;
+            break;
 
             //logistic function
             case 4:
-                val = AC1 / (1 + FastMath.exp(-FastMath.abs(AC2) * residue));
-                break;
+                val = AC1 / (1 + exp(-FastMath.abs(AC2) * residue));
+            break;
 
             //tanh
             case 5:
-                val = AC1 * FastMath.tanh(AC2 * residue);
-                break;
+                val = AC1 * tanh(AC2 * residue);
+            break;
 
             //ReLU/rectifier
             case 6:
                 val = AC1 * FastMath.max(0, AC2 * residue);
-                break;
+            break;
 
             //gaussian
             case 7:
-                val = AC1 * FastMath.exp(-FastMath.abs(AC2) * residue * residue);
-                break;
+                val = AC1 * exp(-FastMath.abs(AC2) * residue * residue);
+            break;
         }
     }
 
@@ -99,15 +98,26 @@ class Node extends Executable
     @Override
     public String toString()
     {
-        if (name < 0)
-        {
-            int temp = -(name + 1);
-            if (temp >= Main.inputs.length)
-                return Main.outputs[temp - Main.inputs.length];
-            else
-                return Main.inputs[temp];
-        }
+        if (input)
+            return Main.inputs[-name];
+        if (output)
+            return Main.outputs[-name];
         return "" + NeuralNetwork.alphabet.charAt(name);
+    }
+
+    public static double tanh(double val)
+    {
+        return (exp(2 * val) - 1) / (exp(2 * val) + 1);
+    }
+
+    public static double exp(double val)
+    {
+        if (val < -700)
+            return 0;
+        if (val > 700)
+            val = 700;
+        final long tmp = (long) (1512775 * val + (1072693248 - 60801));
+        return Double.longBitsToDouble(tmp << 32);
     }
 }
 

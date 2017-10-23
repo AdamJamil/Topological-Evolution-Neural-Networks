@@ -18,7 +18,8 @@ class ShowcaseTrainer
 
     private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
     private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
-    private int currentNeuralNetwork, currentGeneration;
+    private int currentNeuralNetworkIndex, currentGeneration;
+    private NeuralNetwork neuralNetwork;
 
     private int inputs, outputs;
 
@@ -60,6 +61,7 @@ class ShowcaseTrainer
 
             generation[i] = new NeuralNetwork(inputs, outputs, inputNodeGenes, inputEdgeGenes, size);
         }
+        neuralNetwork = generation[0];
     }
 
     private void createNextGeneration()
@@ -121,7 +123,7 @@ class ShowcaseTrainer
         {
             gc.clearRect(0, 0, width, height);
 
-            if (generation[0].dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
+            if (finalNet.dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
             {
                 timeline.stop();
                 System.exit(0);
@@ -129,12 +131,12 @@ class ShowcaseTrainer
             t++;
 
             //kinematics
-            double output = finalNet.execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
+            double output = finalNet.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0];
 
-            cartSpeed += tendt * FastMath.tanh(output / 16);
+            cartSpeed += tendt * tanh(output / 16);
             cartPosition += cartSpeed * dt;
             poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
-            poleAngle = Math.acos((cartSpeed * dtOverPoleLength) + Math.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
 
             //setting f(x) = ax + b and forcing f(-100) = 50, f(100) = width - 50 yields
@@ -168,9 +170,9 @@ class ShowcaseTrainer
         {
             if (t > 5000000)
             {
-                //System.out.println(generation[currentNeuralNetwork]);
+                //System.out.println(generation[currentNeuralNetworkIndex]);
                 thread.start();
-                finalNet = generation[currentNeuralNetwork];
+                finalNet = generation[currentNeuralNetworkIndex];
                 finalNet.clean();
                 t = 0;
                 cartPosition = 0;
@@ -183,18 +185,18 @@ class ShowcaseTrainer
                 break;
             }
 
-            if (generation[currentNeuralNetwork].dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
+            if (neuralNetwork.dead || poleAngle < rightDeadAngle || poleAngle > leftDeadAngle || cartPosition < -100 || cartPosition > 100)
             {
-                generation[currentNeuralNetwork].fitness = t;
-                if (currentNeuralNetwork == 0)
+                neuralNetwork.fitness = t;
+                if (currentNeuralNetworkIndex == 0)
                     orderedNeuralNetworks.add(generation[0]);
                 else
                     insertNetwork();
 
-                currentNeuralNetwork++;
-                if (currentNeuralNetwork == 100)
+                currentNeuralNetworkIndex++;
+                if (currentNeuralNetworkIndex == 100)
                 {
-                    currentNeuralNetwork = 0;
+                    currentNeuralNetworkIndex = 0;
                     currentGeneration++;
                     System.out.println("generation: " + currentGeneration + ",  best: " + orderedNeuralNetworks.get(0).fitness);
                     createNextGeneration();
@@ -214,6 +216,7 @@ class ShowcaseTrainer
                     }
                 }
 
+                neuralNetwork = generation[currentNeuralNetworkIndex];
                 t = 0;
                 cartPosition = 0;
                 cartSpeed = -1;
@@ -225,12 +228,11 @@ class ShowcaseTrainer
             t++;
 
             //kinematics
-            double output = generation[currentNeuralNetwork].execute(new double[]{cartPosition, cartSpeed, poleAngle, poleSpeed})[0];
-
-            cartSpeed += tendt * FastMath.tanh(output / 16);
+            cartSpeed += tendt * tanh(neuralNetwork.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0]);
             cartPosition += cartSpeed * dt;
-            poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
-            poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            double cosAngle = Riven.cos((float) poleAngle);
+            poleSpeed -= cosAngle * gdtOverPoleLength; //change in angular speed due to gravity
+            poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart, derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
         }
     }
@@ -238,7 +240,7 @@ class ShowcaseTrainer
     //binary search function
     private void insertNetwork()
     {
-        int left = 0, right = currentNeuralNetwork - 1, middle;
+        int left = 0, right = currentNeuralNetworkIndex - 1, middle;
 
         while (true)
         {
@@ -246,7 +248,7 @@ class ShowcaseTrainer
             long temp = orderedNeuralNetworks.get(middle).fitness;
             if (t == temp)
             {
-                orderedNeuralNetworks.add(middle, generation[currentNeuralNetwork]);
+                orderedNeuralNetworks.add(middle, generation[currentNeuralNetworkIndex]);
                 break;
             }
             else if (t > temp)
@@ -254,7 +256,7 @@ class ShowcaseTrainer
                 right = middle - 1;
                 if (left > right)
                 {
-                    orderedNeuralNetworks.add(middle, generation[currentNeuralNetwork]);
+                    orderedNeuralNetworks.add(middle, generation[currentNeuralNetworkIndex]);
                     break;
                 }
             }
@@ -263,7 +265,7 @@ class ShowcaseTrainer
                 left = middle + 1;
                 if (left > right)
                 {
-                    orderedNeuralNetworks.add(middle + 1, generation[currentNeuralNetwork]);
+                    orderedNeuralNetworks.add(middle + 1, generation[currentNeuralNetworkIndex]);
                     break;
                 }
             }
@@ -279,6 +281,54 @@ class ShowcaseTrainer
         catch (Exception e)
         {
             e.printStackTrace();
+        }
+    }
+
+    private static double tanh(double val)
+    {
+        return (exp(2 * val) - 1) / (exp(2 * val) + 1);
+    }
+
+    private static double exp(double val)
+    {
+        if (val < -700)
+            return 0;
+        if (val > 700)
+            val = 700;
+        final long tmp = (long) (1512775 * val + (1072693248 - 60801));
+        return Double.longBitsToDouble(tmp << 32);
+    }
+
+    public static final class Riven
+    {
+        private static final int SIN_BITS, SIN_MASK, SIN_COUNT;
+        private static final double radFull, radToIndex;
+        private static final double degFull, degToIndex;
+        private static final double[] cos;
+
+        static {
+            SIN_BITS = 12;
+            SIN_MASK = ~(-1 << SIN_BITS);
+            SIN_COUNT = SIN_MASK + 1;
+
+            radFull = (Math.PI * 2.0);
+            degFull = 360.0;
+            radToIndex = SIN_COUNT / radFull;
+            degToIndex = SIN_COUNT / degFull;
+
+            cos = new double[SIN_COUNT];
+
+            for (int i = 0; i < SIN_COUNT; i++)
+                cos[i] = Math.cos((i + 0.5) / SIN_COUNT * radFull);
+
+            // Four cardinal directions (credits: Nate)
+            for (int i = 0; i < 360; i += 90)
+                cos[(int) (i * degToIndex) & SIN_MASK] = Math.cos(i * Math.PI / 180.0);
+        }
+
+        static double cos(float rad)
+        {
+            return cos[(int) (rad * radToIndex) & SIN_MASK];
         }
     }
 }
