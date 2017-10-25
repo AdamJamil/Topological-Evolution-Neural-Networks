@@ -10,9 +10,10 @@ import javafx.stage.Stage;
 
 public class Main extends Application
 {
-    private static final boolean showcaseMode = false;
+    private static final boolean showcaseMode = true;
     static final String[] inputs = new String[]{"x", "v", "theta", "ω"};
     static final String[] outputs = new String[]{"force"};
+    synchronized
 
     @Override
     public void start(Stage primaryStage) throws Exception

@@ -9,7 +9,7 @@ class Trainer
 {
     private static final int networksPerGeneration = 100;
 
-    private long[] bests = new long[1001];
+    private long framesInGeneration = 0;
 
     private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
     private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
@@ -20,6 +20,8 @@ class Trainer
     private double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
     private double poleAngle = Math.PI * 11 / 20; //range of [0, Math.PI]
     private double poleSpeed = 0; //again no real upper or lower limit
+
+    private static double PI = FastMath.PI;
 
     private int inputs, outputs;
 
@@ -32,8 +34,6 @@ class Trainer
     private static final double g = 9.81; //probably doesn't need explanation
     private static final double dtOverPoleLength = dt / poleLength;
     private static final double gdtOverPoleLength = g * dtOverPoleLength;
-
-    private long allTimeBest = 0;
 
     private long t = 0;
 
@@ -98,15 +98,13 @@ class Trainer
 
         while (true)
         {
-            if (t > 5000000)
+            if (t > 1000)
             {
                 System.out.println("Simulation " + number + " stopped; current network fitness over 5000000");
 
                 try
                 {
-                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment7/success/" + currentGeneration + ".txt"), "utf-8"));
-                    for (int i = 0; i < currentGeneration - 1; i++)
-                        writer.write(bests[i] + System.getProperty("line.separator"));
+                    Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment10/success/" + framesInGeneration + ".txt"), "utf-8"));
                     writer.write("Final network:" + System.getProperty("line.separator"));
                     writer.close();
                 }
@@ -125,19 +123,17 @@ class Trainer
                 else
                     insertNetwork();
 
+                framesInGeneration += t;
+
                 currentNeuralNetworkIndex++;
                 if (currentNeuralNetworkIndex == 100)
                 {
-                    allTimeBest = (allTimeBest < orderedNeuralNetworks.get(0).fitness) ? orderedNeuralNetworks.get(0).fitness : allTimeBest;
-                    bests[currentGeneration] = orderedNeuralNetworks.get(0).fitness;
-                    if (currentGeneration == 1000)
+                    if (framesInGeneration > 70000000)
                     {
                         System.out.println("Simulation " + number + " stopped; generation 1000 reached");
                         try
                         {
-                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment7/fail/" + number + " " + allTimeBest + ".txt"), "utf-8"));
-                            for (int i = 0; i < 1000; i++)
-                                writer.write(bests[i] + System.getProperty("line.separator"));
+                            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("log/experiment10/fail/" + framesInGeneration + ".txt"), "utf-8"));
                             writer.close();
                         }
                         catch (Exception e)
@@ -165,16 +161,13 @@ class Trainer
             t++;
 
             //kinematics
-            double output = neuralNetwork.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0];
-
-            cartSpeed += tendt * tanh(output / 16);
+            cartSpeed += tendt * tanh(neuralNetwork.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0]);
             cartPosition += cartSpeed * dt;
-            poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
-            poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            double cosAngle = FastMath.cos(poleAngle);
+            poleSpeed -= cosAngle * gdtOverPoleLength; //change in angular speed due to gravity
+            poleAngle = acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart, derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
         }
-
-        //runGeneration();
     }
 
     //binary search function
@@ -225,5 +218,13 @@ class Trainer
             val = 700;
         final long tmp = (long) (1512775 * val + (1072693248 - 60801));
         return Double.longBitsToDouble(tmp << 32);
+    }
+
+    private static final double C0 = 1.57073, C1 = -0.212053, C2 = 0.0740935, C3 = -0.0186166;
+
+    private static double acos(double val)
+    {
+        val = -val;
+        return PI - ((((C3 * val + C2) * val + C1) * val + C0) * Math.sqrt(1 - val));
     }
 }

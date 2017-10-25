@@ -1,5 +1,7 @@
 package TENN;
 
+import com.sun.org.apache.bcel.internal.generic.FADD;
+import com.sun.org.apache.bcel.internal.generic.FMUL;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
@@ -24,6 +26,8 @@ class ShowcaseTrainer
     private int inputs, outputs;
 
     private double width, height;
+
+    private static double PI = FastMath.PI;
 
     private double cartPosition = 0; //range of [-100, 100], scale to whatever makes sense for display
     private double cartSpeed = -1; //no real upper or lower limit, but reset to 0 when a wall is hit
@@ -131,12 +135,11 @@ class ShowcaseTrainer
             t++;
 
             //kinematics
-            double output = finalNet.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0];
-
-            cartSpeed += tendt * tanh(output / 16);
+            cartSpeed += tendt * tanh(finalNet.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0]);
             cartPosition += cartSpeed * dt;
-            poleSpeed -= FastMath.cos(poleAngle) * gdtOverPoleLength; //change in angular speed due to gravity
-            poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + FastMath.cos(poleAngle)); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            double cosAngle = FastMath.cos(poleAngle);
+            poleSpeed -= cosAngle * gdtOverPoleLength; //change in angular speed due to gravity
+            poleAngle = acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart, derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
 
             //setting f(x) = ax + b and forcing f(-100) = 50, f(100) = width - 50 yields
@@ -172,7 +175,7 @@ class ShowcaseTrainer
             {
                 //System.out.println(generation[currentNeuralNetworkIndex]);
                 thread.start();
-                finalNet = generation[currentNeuralNetworkIndex];
+                finalNet = neuralNetwork;
                 finalNet.clean();
                 t = 0;
                 cartPosition = 0;
@@ -230,9 +233,9 @@ class ShowcaseTrainer
             //kinematics
             cartSpeed += tendt * tanh(neuralNetwork.execute(cartPosition, cartSpeed, poleAngle, poleSpeed)[0]);
             cartPosition += cartSpeed * dt;
-            double cosAngle = Riven.cos((float) poleAngle);
+            double cosAngle = FastMath.cos(poleAngle);
             poleSpeed -= cosAngle * gdtOverPoleLength; //change in angular speed due to gravity
-            poleAngle = FastMath.acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            poleAngle = acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart, derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
         }
     }
@@ -299,36 +302,11 @@ class ShowcaseTrainer
         return Double.longBitsToDouble(tmp << 32);
     }
 
-    public static final class Riven
+    private static final double C0 = 1.57073, C1 = -0.212053, C2 = 0.0740935, C3 = -0.0186166;
+
+    private static double acos(double val)
     {
-        private static final int SIN_BITS, SIN_MASK, SIN_COUNT;
-        private static final double radFull, radToIndex;
-        private static final double degFull, degToIndex;
-        private static final double[] cos;
-
-        static {
-            SIN_BITS = 12;
-            SIN_MASK = ~(-1 << SIN_BITS);
-            SIN_COUNT = SIN_MASK + 1;
-
-            radFull = (Math.PI * 2.0);
-            degFull = 360.0;
-            radToIndex = SIN_COUNT / radFull;
-            degToIndex = SIN_COUNT / degFull;
-
-            cos = new double[SIN_COUNT];
-
-            for (int i = 0; i < SIN_COUNT; i++)
-                cos[i] = Math.cos((i + 0.5) / SIN_COUNT * radFull);
-
-            // Four cardinal directions (credits: Nate)
-            for (int i = 0; i < 360; i += 90)
-                cos[(int) (i * degToIndex) & SIN_MASK] = Math.cos(i * Math.PI / 180.0);
-        }
-
-        static double cos(float rad)
-        {
-            return cos[(int) (rad * radToIndex) & SIN_MASK];
-        }
+        val = -val;
+        return PI - ((((C3 * val + C2) * val + C1) * val + C0) * Math.sqrt(1 - val));
     }
 }
