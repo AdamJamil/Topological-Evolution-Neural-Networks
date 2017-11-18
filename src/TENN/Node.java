@@ -1,39 +1,37 @@
 package TENN;
 
 import org.apache.commons.math3.util.FastMath;
-
 import java.util.ArrayList;
 
 class Node extends Executable
 {
     ArrayList<Edge> outgoingEdges = new ArrayList<>();
 
-    boolean visited;
-    boolean output;
-    boolean input;
-    boolean cleaned;
-    boolean reachesOutput = false;
+    boolean visited; //used in traverse method
+    boolean output; //whether or not this is an output node
+    boolean input; //whether or not this is an input node
+    boolean cleaned; //used in clean method
+    boolean reachesOutput; //whether or not this node connects to the output
 
     double AC1; //activation constant 1; range bounded to [0, 10], used as a multiplicative constant
-    double AC2; //activation constant 2; range bounded to [0, 2]. idea is to have
-    //equal chance of squashing (x \in [-1, 1]$ and stretching (x \not \in [-1, 1])
+    double AC2; //activation constant 2; range bounded to [0, 2].
 
-    short activationType; //range [0, 8] \cap \nat
+    short activationType; //range 0-7, represents which activation function occurs at this node
 
     double residue; //sum of all inputs
-    double val; //result of activation function
+    double val; //f(residue)
 
     int name;
 
     void execute()
     {
+        //prevents overflow problems
         if (residue > 2000000000)
             residue = 2000000000;
         if (residue < -2000000000)
             residue = -2000000000;
 
-        //switches activation type to figure out which function to use
-        switch (activationType % 9) //there are 9 activation functions i picked
+        switch (activationType) //there are 8 activation functions I picked
         {
             //identity (linear) activation function
             case 0:
@@ -77,6 +75,7 @@ class Node extends Executable
         }
     }
 
+    //constructor used for inputs nodes - linear activation with all constants of 1 is identity
     Node()
     {
         AC2 = 1;
@@ -84,6 +83,7 @@ class Node extends Executable
         activationType = 0;
     }
 
+    //constructor used by NeuralNetwork when instantiating from NodeGene
     Node(int name)
     {
         this();
@@ -94,10 +94,10 @@ class Node extends Executable
     public String toString()
     {
         if (input)
-            return Main.inputs[-name];
+            return Main.inputs[name];
         if (output)
-            return Main.outputs[-name];
-        return "" + NeuralNetwork.alphabet.charAt(name);
+            return Main.outputs[name];
+        return Character.toString(NeuralNetwork.alphabet.charAt(name)); //usually few nodes, so this works well
     }
 
     private static double tanh(double val)

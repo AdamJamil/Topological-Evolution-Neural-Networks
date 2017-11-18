@@ -10,12 +10,9 @@ class EdgeGene
     short incomingNode;
     short outgoingNode;
 
-    private static final double mutationMultiplier = 1.5;
-    private static final double changeWeight = 0.4 * mutationMultiplier;
+    private static final double changeWeight = 0.6;
+
     private static final GaussianRandomGenerator random = new GaussianRandomGenerator(new MersenneTwister());
-
-    private static int edgeGenes = 0;
-
     private static XoRoShiRo128PlusRandom uniformRandom = new XoRoShiRo128PlusRandom();
 
     private EdgeGene(short incomingNode, short outgoingNode)
@@ -28,8 +25,12 @@ class EdgeGene
 
     EdgeGene mutate()
     {
-        EdgeGene tempEdgeGene = actualCloneBecauseJavaIsWrittenByPajeets();
+        EdgeGene tempEdgeGene = klone();
 
+        //use normal distribution to change weight
+        //values outside bound are clipped down to bound
+        //TODO: REPLACE 3.33 OR FIND REASONING
+        //TODO: FIX BOUNDARY ISSUE (MINOR)
         if (uniformRandom.nextDoubleFast() < changeWeight)
         {
             double mutatedWeight = (3.33 * random.nextNormalizedDouble()) + tempEdgeGene.edge.weight;
@@ -43,7 +44,8 @@ class EdgeGene
         return tempEdgeGene;
     }
 
-    EdgeGene actualCloneBecauseJavaIsWrittenByPajeets()
+    //manual deep copy
+    EdgeGene klone()
     {
         EdgeGene clonedEdgeGene = new EdgeGene(this.incomingNode, this.outgoingNode);
         clonedEdgeGene.edge.weight = edge.weight;
@@ -55,8 +57,6 @@ class EdgeGene
     {
         EdgeGene edgeGene = new EdgeGene((short) (uniformRandom.nextDoubleFast() * size), (short) (uniformRandom.nextDoubleFast() * size));
         edgeGene.edge.weight = -10 + (20 * uniformRandom.nextDoubleFast());
-        edgeGene.edge.name = edgeGenes;
-        edgeGenes++;
 
         return edgeGene;
     }

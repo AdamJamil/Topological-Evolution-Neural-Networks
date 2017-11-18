@@ -1,7 +1,5 @@
 package TENN;
 
-import com.sun.org.apache.bcel.internal.generic.FADD;
-import com.sun.org.apache.bcel.internal.generic.FMUL;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
@@ -17,6 +15,8 @@ class ShowcaseTrainer
 {
     private Timeline timeline;
     private static final int networksPerGeneration = 100;
+
+    private long totalFrames = 0;
 
     private NeuralNetwork[] generation = new NeuralNetwork[networksPerGeneration];
     private ArrayList<NeuralNetwork> orderedNeuralNetworks = new ArrayList<>(networksPerGeneration);
@@ -99,12 +99,6 @@ class ShowcaseTrainer
             generation[i + 50] = orderedNeuralNetworks.get(i).mutate();
     }
 
-    private void run()
-    {
-        System.out.println(finalNet);
-        timeline.play();
-    }
-
     ShowcaseTrainer(Stage stage, Canvas canvas, int inputs, int outputs)
     {
         this.inputs = inputs;
@@ -151,10 +145,9 @@ class ShowcaseTrainer
             gc.fillOval(center + poleLength * Math.cos(poleAngle) - 5, 100 - poleLength * Math.sin(poleAngle) - 5, 10, 10);
         });
 
-        //boilerplate code
         timeline.getKeyFrames().add(frame);
-        //timeline.play();
 
+        //music thread
         Thread thread = new Thread(() ->
         {
             try
@@ -184,7 +177,8 @@ class ShowcaseTrainer
                 poleSpeed = 0;
 
                 hang();
-                run();
+                System.out.println(finalNet);
+                timeline.play();
                 break;
             }
 
@@ -196,6 +190,8 @@ class ShowcaseTrainer
                 else
                     insertNetwork();
 
+                totalFrames += t;
+
                 currentNeuralNetworkIndex++;
                 if (currentNeuralNetworkIndex == 100)
                 {
@@ -205,7 +201,7 @@ class ShowcaseTrainer
                     createNextGeneration();
                     orderedNeuralNetworks.clear();
 
-                    if (currentGeneration == 200)
+                    if (totalFrames > 70000000)
                     {
                         try
                         {
@@ -235,7 +231,8 @@ class ShowcaseTrainer
             cartPosition += cartSpeed * dt;
             double cosAngle = FastMath.cos(poleAngle);
             poleSpeed -= cosAngle * gdtOverPoleLength; //change in angular speed due to gravity
-            poleAngle = acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart, derived assuming mass moves straight up
+            poleAngle = acos((cartSpeed * dtOverPoleLength) + cosAngle); //pole rotation due to motion of cart,
+                                                                         // derived assuming mass moves straight up
             poleAngle += poleSpeed * dt; //pole rotation due to angular speed
         }
     }

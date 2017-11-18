@@ -8,6 +8,7 @@ class Edge extends Executable
 
     int name;
 
+    //sends value to next node
     public void execute()
     {
         outgoingNode.residue += incomingNode.val * weight;
